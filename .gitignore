@@ -1,0 +1,5 @@
+.tools-venv/
+.playwright-mcp/
+shot-*.png
+.DS_Store
+.zcode/

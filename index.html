@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>耿李超 — AI 产品经理 · 个人作品集</title>
+  <meta name="description" content="耿李超的作品集：AI 产品经理方向，浙江大学艺术与科技硕士在读，多段 AI 产品实习与个人项目记录。">
+  <meta property="og:title" content="耿李超 — AI 产品经理 · 个人作品集">
+  <meta property="og:description" content="AI 产品经理 · 浙江大学硕士在读 · 项目与思考记录">
+  <meta property="og:type" content="website">
+  <!-- 占位：og:image 放一张 1200x630 的分享封面图 -->
+  <!-- <meta property="og:image" content="https://你的域名/assets/og-cover.png"> -->
+
+  <link rel="preconnect" href="https://fonts.loli.net">
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
+  <link href="https://fonts.loli.net/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23002FA7'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-style='italic' font-size='16' fill='%23F4F1EA' text-anchor='middle'%3EY%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 过场 -->
+  <div class="intro" id="intro" aria-hidden="true">
+    <span class="intro-word">Portfolio <em>2026</em></span>
+  </div>
+
+  <!-- 自定义光标 -->
+  <div class="cursor-dot" id="cursor-dot" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursor-ring" aria-hidden="true"><span id="cursor-label"></span></div>
+
+  <!-- 导航 -->
+  <nav class="nav" id="nav">
+    <a href="#top" class="nav-logo" data-magnetic>耿李超<em>Geng Lichao</em></a>
+    <div class="nav-links">
+      <a href="#works" class="nav-link">项目</a>
+      <a href="#about" class="nav-link">关于</a>
+      <a href="#contact" class="nav-link">联系</a>
+      <a href="assets/resume.pdf" target="_blank" rel="noopener" class="btn btn-sm" data-magnetic>简历 PDF</a>
+    </div>
+  </nav>
+
+  <main id="top">
+
+    <!-- ================= Hero ================= -->
+    <header class="hero">
+      <span class="hero-bg-word" aria-hidden="true">Portfolio</span>
+      <div class="hero-inner">
+        <div class="hero-text">
+          <p class="hero-eyebrow" data-reveal>个人作品集 · Portfolio 2026</p>
+          <h1 class="hero-title">
+            <span class="line"><span class="line-inner">你好，</span></span>
+            <span class="line"><span class="line-inner">我是 <em>耿李超</em>。</span></span>
+          </h1>
+          <p class="hero-sub" data-reveal>浙江大学艺术与科技（AI 方向）硕士在读，做过三段 AI 产品实习，也在做自己的 AI 项目。这个网站记录我的项目与思考——我正在成为一名 AI 产品经理的路上。</p>
+          <div class="hero-meta" data-reveal>
+            <span>坐标 杭州</span>
+            <span class="dot"></span>
+            <span>2027 届硕士</span>
+            <span class="dot"></span>
+            <span>求职意向：AI 产品经理</span>
+          </div>
+        </div>
+        <div class="hero-visual" data-reveal>
+          <figure class="hero-photo">
+            <img src="assets/portrait.webp" alt="耿李超的照片" onerror="this.remove()">
+            <span class="hero-photo-note">照片 / 主视觉占位</span>
+          </figure>
+          <div class="hero-badge" aria-hidden="true">
+            <svg viewBox="0 0 100 100" width="110" height="110">
+              <defs><path id="badge-circle" d="M50,50 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0"/></defs>
+              <text><textPath href="#badge-circle">2027 秋招 · OPEN TO WORK · AI PM ·</textPath></text>
+            </svg>
+            <svg class="hero-badge-center" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v16m0 0l-6-6m6 6l6-6"/></svg>
+          </div>
+        </div>
+      </div>
+      <a href="#works" class="hero-scroll" data-reveal aria-label="向下滚动查看项目">
+        <span>Scroll</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v16m0 0l-6-6m6 6l6-6"/></svg>
+      </a>
+    </header>
+
+    <!-- 跑马灯 -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>AI Product Manager <i>◆</i> Product Sense <i>◆</i> LLM Application <i>◆</i> User Insight <i>◆</i> Data Driven <i>◆</i>&nbsp;</span>
+        <span>AI Product Manager <i>◆</i> Product Sense <i>◆</i> LLM Application <i>◆</i> User Insight <i>◆</i> Data Driven <i>◆</i>&nbsp;</span>
+      </div>
+    </div>
+
+    <!-- ================= Works ================= -->
+    <section class="section" id="works">
+      <div class="section-head" data-reveal>
+        <span class="section-num">01</span>
+        <h2 class="section-label">项目 <em>Selected Works</em></h2>
+      </div>
+      <div id="works-list" class="works-list"><!-- 由 js/data.js + js/main.js 渲染 --></div>
+    </section>
+
+    <!-- ================= About ================= -->
+    <section class="section" id="about">
+      <div class="section-head" data-reveal>
+        <span class="section-num">02</span>
+        <h2 class="section-label">关于我 <em>About</em></h2>
+      </div>
+      <div class="about-grid">
+        <p class="about-bio" data-reveal>
+          我是耿李超，浙江大学艺术与科技（交互设计 · AI 方向）硕士在读。
+          先后在字节跳动飞书商业化与 AI 创业公司负责 AI 产品工作，完整经历过从需求洞察、方案设计到效果验证的闭环。
+          我相信好的 AI 产品不是技术的堆砌，而是对真实场景的深刻理解。
+        </p>
+        <div class="about-side" data-reveal>
+          <div class="about-block">
+            <h3>教育背景</h3>
+            <p>浙江大学 · 硕士 · 艺术与科技（交互设计 · AI 方向）<br>2024.09 – 2027.06（预计）<br><br>浙江科技大学 · 本科 · 视觉传达（数字媒体 / 交互方向）<br>2020.09 – 2024.06</p>
+          </div>
+          <div class="about-block">
+            <h3>技能与工具</h3>
+            <ul class="tags">
+              <li>Agent / Skill 工作流</li><li>Prompt / Context Engineering</li><li>Benchmark 评测体系</li>
+              <li>RAG / GraphRAG</li><li>ComfyUI / Dify / Coze</li><li>Figma / Axure</li>
+              <li>Python / MySQL</li><li>Claude Code / Codex</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Contact ================= -->
+    <section class="section contact" id="contact">
+      <div class="section-head" data-reveal>
+        <span class="section-num">03</span>
+        <h2 class="section-label">联系 <em>Contact</em></h2>
+      </div>
+      <h3 class="contact-title" data-reveal>如果我的经历与你的团队契合，<br>欢迎<em>随时联系我</em>。</h3>
+      <div class="contact-actions" data-reveal>
+        <a href="mailto:2959162741@qq.com" class="btn btn-accent btn-lg" data-magnetic>
+          2959162741@qq.com
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </a>
+        <a href="assets/resume.pdf" target="_blank" rel="noopener" class="btn btn-lg" data-magnetic>下载简历 PDF</a>
+      </div>
+      <ul class="contact-links" data-reveal>
+        <li><a href="tel:15061998519">电话 15061998519</a></li>
+        <li><a href="mailto:2959162741@qq.com">邮箱 2959162741@qq.com</a></li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>© 2026 耿李超</span>
+    <span>Designed &amp; built with care.</span>
+  </footer>
+
+  <!-- ================= 项目详情弹层 ================= -->
+  <div class="modal" id="project-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-panel">
+      <button class="modal-close" data-close-modal aria-label="关闭详情" data-magnetic>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="modal-body" id="modal-body"><!-- 动态渲染 --></div>
+    </div>
+  </div>
+
+  <!-- 图片查看器 -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <div class="lightbox-backdrop" data-close-lightbox></div>
+    <div class="lightbox-content" id="lightbox-content"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
