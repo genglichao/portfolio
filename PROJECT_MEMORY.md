@@ -39,7 +39,7 @@
 - [x] 滴滴建联边界修正（2026-09-04）：Skill 设计 parasAfter 中「复用到 10+ Agent」表述删除——超哥明确该作品只对应简历「Agent 应用产品化设计」一条，10+ Agent 属另一段经历，不纳入本项目
 - [ ] EditLoop 演示视频 assets/editloop-demo.mp4（data.js 已引用但文件不存在，待补，否则视频区 404）
 - [ ] 飞享项目时间「2026」待补起止月份
-- [ ] 部署 Vercel（待定）
+- [ ] 部署 Vercel（进行中）：GitHub 已建双远程——origin = Geng-li-chao/portfolio（gh CLI 账号），genglichao = genglichao/portfolio（Vercel 绑定账号，2026-09-04 已推送 main）。剩最后一步：超哥在 vercel.com/new 导入 genglichao/portfolio（零配置静态站，Framework 选 Other）。注意导入后检查 Settings → Deployment Protection 保持关闭（飞享项目踩过 SSO 登录墙的坑）。日常迭代记得两个远程都要 push：git push origin main && git push genglichao main（后者触发 Vercel 自动部署）
 
 ## 重要决策
 
@@ -56,5 +56,4 @@
 
 - 滴滴建联「已部署内部演示环境」等成果表述是否属实（我基于录屏与简历写的）
 - EditLoop 部署后是否有可公开链接；EditLoop 演示视频文件
-- 项目根目录有我此前生成的废弃示意图草稿（diagram-*.png、.diagram-tmp/），auto 模式拦截了 rm，可自行删除
-- 是否 git init 并提交首个版本
+- 是否保留 Geng-li-chao/portfolio 这个仓库（当前主远程，Vercel 实际用的是 genglichao/portfolio；不需要的话可删）
