@@ -79,7 +79,8 @@
       var hasLink = mediaKind === 'link' && p.media.url;
       var hasBoards = mediaKind === 'board' && ((p.media.boards || []).length || p.media.video);
       var liveCta = hasLink
-        ? '<a class="btn btn-accent" href="' + esc(p.media.url) + '" target="_blank" rel="noopener" data-magnetic>访问线上站点 ' + ARROW_SVG + '</a>'
+        ? '<a class="btn btn-accent" href="' + esc(p.media.url) + '" target="_blank" rel="noopener" data-magnetic>访问线上站点 ' + ARROW_SVG + '</a>' +
+          (p.media.urlNote ? '<span class="link-note">' + esc(p.media.urlNote) + '</span>' : '')
         : '';
       var detailCtaLabel = hasBoards ? '查看展板与详情' : '查看案例详情';
 
@@ -132,7 +133,8 @@
       // 有线上链接时在 meta 区放「访问线上站点」实心按钮
       if (p.media && p.media.kind === 'link' && p.media.url) {
         metaHtml += '<div class="md-meta-cta-cell"><a class="md-meta-live" href="' + esc(p.media.url) +
-          '" target="_blank" rel="noopener">访问线上站点 ' + ARROW_SVG + '</a></div>';
+          '" target="_blank" rel="noopener">访问线上站点 ' + ARROW_SVG + '</a>' +
+          (p.media.urlNote ? '<span class="link-note">' + esc(p.media.urlNote) + '</span>' : '') + '</div>';
       }
       html += '<dl class="md-meta">' + metaHtml + '</dl>';
     }
@@ -210,7 +212,8 @@
     // 线上链接 CTA（meta 区已有按钮时不重复渲染）
     if (p.media && p.media.kind === 'link' && p.media.url && !p.media.ctaInMeta) {
       html += '<div class="md-section md-cta"><a class="btn btn-accent" href="' + esc(p.media.url) +
-        '" target="_blank" rel="noopener" data-magnetic>访问线上站点 ' + ARROW_SVG + '</a></div>';
+        '" target="_blank" rel="noopener" data-magnetic>访问线上站点 ' + ARROW_SVG + '</a>' +
+        (p.media.urlNote ? '<span class="link-note">' + esc(p.media.urlNote) + '</span>' : '') + '</div>';
     }
 
     html += '</div>';

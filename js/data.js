@@ -12,6 +12,7 @@
  *  - cover     卡片封面。未配图时用渐变色；有图则加一行 coverImg: 'assets/xxx.webp'
  *  - media     详情页媒体：
  *              { kind: 'link',  url: 'https://...' }            有线上链接（卡片会显示「访问线上站点」）
+ *                可选 urlNote: '需连接 VPN 访问' 等提示，显示在按钮旁
  *              { kind: 'board', boards: [...], video: {...} }   展板图 + 视频（boards 里 coverImg 填图片路径）
  *  - detail    案例详情（概览 / 背景与问题 / 过程与方案 / AI 亮点 / 成果 / 复盘）
  *              detail.note     可选，脱敏声明（实习项目涉敏感信息时使用），显示在概览下方
@@ -232,6 +233,7 @@ const PROJECTS = [
     media: {
       kind: 'link',
       url: 'https://flight-deals-mz2sazegk-genglichaos-projects.vercel.app/',
+      urlNote: '需连接 VPN 访问',
       ctaInMeta: true,
       video: { src: 'assets/flydeals-demo.mp4', poster: 'assets/flydeals-poster.webp', caption: '产品演示视频（3 分 21 秒）：从一句话输入到意图澄清、推荐卡片与调试面板的完整走查' },
     },
