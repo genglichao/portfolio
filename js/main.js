@@ -5,6 +5,15 @@
 (function () {
   'use strict';
 
+  /* 滚动条宽度（px）暴露给 CSS：100vw 含滚动条，而布局坐标不含，
+   * 卡片文案要靠它精确对齐到页面左边距线（见 .card-caption-left） */
+  function publishScrollbarWidth() {
+    var w = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--sbw', w + 'px');
+  }
+  publishScrollbarWidth();
+  window.addEventListener('resize', publishScrollbarWidth);
+
   var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var finePointer = window.matchMedia('(pointer: fine)').matches;
   var hasGsap = typeof window.gsap !== 'undefined';
@@ -107,6 +116,401 @@
 
       list.appendChild(article);
     });
+  }
+
+  /* ---------------- Works 舞台：WebGL 柔性卡片转子（对齐 nk.studio 技术链路） ----------------
+   * 两层系统：
+   *  1. 位置层（滚动量驱动）：卡片绕水平轴公转，ScrollTrigger pin + 分段 ease
+   *  2. 形变层（滚动速度驱动）：卡片弯成圆柱面，弯曲量 ∝ 滚动速度，方向随滚动方向，
+   *     停止滚动后弹簧回弹到平面矩形 —— 顶点级形变，CSS 做不到，走 WebGL
+   * 降级链：three 加载失败 / 无 WebGL → CSS 刚性转子 → 经典列表
+   */
+  var stageState = { active: -1 };
+
+  var STAGE = {
+    STEP: 90,             // 相邻卡圆心角（度）：切换瞬间角度和，静止时邻卡完全侧立不可见（对齐参考视频测量）
+    RADIUS_K: 1.0,        // 转子半径 = 卡高 × 1.0（≈ 40% 视口高，参考视频反推值）
+    SCROLL_PER_CARD: 1.8, // 每张卡的滚动行程（屏）
+    BEND_K: 0.08,         // 滚动速度 → 弯曲目标 的比例（提高灵敏度，让慢速滚动也出明显弯曲）
+    BEND_STIFF: 0.22,     // 弯曲弹簧刚度（提高响应速度，更跟手）
+    BEND_DAMP: 0.68,      // 弹簧阻尼（略低于临界，回弹带轻微弹性感）
+  };
+
+  function syncCaption() {
+    var p = PROJECTS[stageState.active];
+    if (!p) return;
+    var nameEl = document.getElementById('stage-name');
+    var numEl = document.getElementById('stage-num');
+    var metricEl = document.getElementById('stage-metric');
+    var sideEl = document.getElementById('stage-side');
+    var cta = document.getElementById('stage-cta');
+    var shortName = p.title.split('·')[0].trim();
+    cta.setAttribute('data-open', p.id);
+    numEl.textContent = ('0' + (stageState.active + 1)).slice(-2);
+    nameEl.textContent = shortName;
+    if (metricEl) metricEl.textContent = p.metric || '';
+    if (sideEl) sideEl.textContent = p.typeLabel + ' · ' + p.year;
+    gsap.fromTo([numEl, nameEl, metricEl, cta].filter(Boolean),
+      { opacity: 0, y: 14 },
+      { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.05, overwrite: true });
+  }
+
+  function setStageCaptionTotal(n) {
+    var totalEl = document.getElementById('stage-total');
+    if (totalEl) totalEl.textContent = '/ ' + ('0' + n).slice(-2);
+  }
+
+  // 分段 easeInOutCubic：每张卡前 35%/后 35% 几乎停在正位，中段快速翻转（停留:过渡 ≈ 3:1）
+  function segmentEase(p, cards) {
+    var seg = p * (cards - 1);
+    var i = Math.floor(seg);
+    var f = seg - i;
+    var fe = f < 0.5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2;
+    return (i + fe) * STAGE.STEP;
+  }
+
+  function createStageScrollTrigger(stage, onUpdate) {
+    var n = PROJECTS.length;
+    return window.ScrollTrigger.create({
+      trigger: stage,
+      start: 'top top',
+      end: function () { return '+=' + Math.round(window.innerHeight * ((n - 1) * STAGE.SCROLL_PER_CARD + 0.25)); },
+      pin: true,
+      scrub: 0.6,
+      onUpdate: function (self) { onUpdate(self.progress); },
+    });
+  }
+
+  /* ---------- WebGL 转子 ---------- */
+  function initWorksStageGL() {
+    var canvas = document.getElementById('works-gl');
+    if (!canvas) return Promise.resolve(false);
+    var gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!gl) return Promise.resolve(false);
+
+    return import('https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js')
+      .then(function (THREE) {
+        var stage = document.getElementById('works-stage');
+        var drum = document.getElementById('works-drum');
+        var n = PROJECTS.length;
+
+        var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setClearColor(0x000000, 0);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+        var camera = new THREE.PerspectiveCamera(45, 1, 1, 8000);
+        var scene = new THREE.Scene();
+        var loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+
+        // 桶形畸变着色器（对齐 ricardochance.com 实现）
+        var barrelVertexShader = `
+          uniform float uBarrelStrength;
+          uniform float uBarrelScale;
+          uniform float uBarrelEdgeLift;
+          uniform float uMeshX;
+          uniform float uMeshWidth;
+          uniform float uViewportWidth;
+
+          varying vec2 vUv;
+
+          const float M_PI = 3.14159265;
+
+          vec3 globalViewportBarrelY(vec3 pos) {
+            float vertexWorldX = uMeshX + pos.x * uMeshWidth;
+            float normalizedX = clamp(vertexWorldX / (uViewportWidth * 0.5), -1.0, 1.0);
+            float distFromCenter = abs(normalizedX);
+
+            float pinchAtX = cos(distFromCenter * M_PI * 0.5);
+            float edgeAtX = 1.0 - pinchAtX;
+            float s = uBarrelStrength * uBarrelScale;
+
+            pos.y *= 1.0 - pinchAtX * s;
+            pos.y *= 1.0 + edgeAtX * s * uBarrelEdgeLift;
+
+            return pos;
+          }
+
+          void main() {
+            vUv = uv;
+            vec3 pos = globalViewportBarrelY(position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          }
+        `;
+
+        var barrelFragmentShader = `
+          uniform sampler2D map;
+          varying vec2 vUv;
+
+          void main() {
+            gl_FragColor = texture2D(map, vUv);
+          }
+        `;
+
+        // 无封面项目：渐变 + 序号 兜底纹理
+        function fallbackTexture(THREE, idx) {
+          var c = document.createElement('canvas');
+          c.width = 800; c.height = 500;
+          var ctx = c.getContext('2d');
+          var g = ctx.createLinearGradient(0, 0, 800, 500);
+          g.addColorStop(0, '#1d2440'); g.addColorStop(1, '#0e1220');
+          ctx.fillStyle = g; ctx.fillRect(0, 0, 800, 500);
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.font = '600 130px Georgia, serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('0' + (idx + 1), 400, 260);
+          var t = new THREE.CanvasTexture(c);
+          t.colorSpace = THREE.SRGBColorSpace;
+          return t;
+        }
+
+        var root = new THREE.Group();
+        scene.add(root);
+        var meshes = [];
+        var state = { w: 0, h: 0, cardW: 0, cardH: 0, radius: 0, axisY: 0 };
+
+        // 全局 barrel uniforms（所有卡片共享）
+        var barrelUniforms = {
+          uBarrelStrength: { value: 0.0 },
+          uBarrelScale: { value: 0.28 },
+          uBarrelEdgeLift: { value: 0.42 },
+          uViewportWidth: { value: 0 },
+        };
+
+        function buildCards() {
+          meshes.forEach(function (m) { root.remove(m.pivot); m.geometry.dispose(); m.material.dispose(); });
+          meshes = [];
+          var cardW = Math.min(1000, state.w * 0.66);
+          var cardH = cardW / 2.75;
+          var radius = cardH * STAGE.RADIUS_K;
+          state.cardW = cardW; state.cardH = cardH; state.radius = radius;
+          state.axisY = state.h * -0.065;
+          barrelUniforms.uViewportWidth.value = state.w;
+
+          var CARD_AR = cardW / cardH;
+          PROJECTS.forEach(function (p, i) {
+            var geo = new THREE.PlaneGeometry(cardW, cardH, 1, 24);
+            var tex;
+            var mesh;
+            if (p.coverImg) {
+              tex = loader.load(p.coverImg, function (t) {
+                var imgAR = t.image.width / t.image.height;
+                if (imgAR > CARD_AR) {
+                  t.repeat.set(CARD_AR / imgAR, 1);
+                  t.offset.set((1 - CARD_AR / imgAR) / 2, 0);
+                } else {
+                  t.repeat.set(1, imgAR / CARD_AR);
+                  t.offset.set(0, (1 - imgAR / CARD_AR) / 2);
+                }
+                if (mesh) mesh.visible = true;
+              });
+              tex.colorSpace = THREE.SRGBColorSpace;
+            } else {
+              tex = fallbackTexture(THREE, i);
+            }
+
+            // 使用 ShaderMaterial + barrel 着色器
+            var mat = new THREE.ShaderMaterial({
+              vertexShader: barrelVertexShader,
+              fragmentShader: barrelFragmentShader,
+              uniforms: {
+                map: { value: tex },
+                uBarrelStrength: barrelUniforms.uBarrelStrength,
+                uBarrelScale: barrelUniforms.uBarrelScale,
+                uBarrelEdgeLift: barrelUniforms.uBarrelEdgeLift,
+                uMeshX: { value: 0 },
+                uMeshWidth: { value: cardW },
+                uViewportWidth: barrelUniforms.uViewportWidth,
+              },
+              side: THREE.FrontSide,
+            });
+
+            mesh = new THREE.Mesh(geo, mat);
+            mesh.visible = !p.coverImg;
+            mesh.position.set(0, 0, radius);
+            var pivot = new THREE.Group();
+            pivot.position.set(0, state.axisY, -radius);
+            pivot.add(mesh);
+            root.add(pivot);
+            meshes.push({
+              pivot: pivot, mesh: mesh, geometry: geo, material: mat,
+              h: cardH, id: p.id,
+            });
+          });
+        }
+
+        function layout() {
+          state.w = stage.clientWidth;
+          state.h = stage.clientHeight;
+          renderer.setSize(state.w, state.h, false);
+          camera.aspect = state.w / state.h;
+          camera.updateProjectionMatrix();
+          // 让 z=0 平面 1 world = 1 px
+          camera.position.set(0, 0, (state.h / 2) / Math.tan(camera.fov * Math.PI / 360));
+          buildCards();
+        }
+
+        // 更新全局 barrel 强度（所有卡片共享）
+        // b ∈ [-1, 1]：滚动速度驱动，停止回 0
+        function applyBend(m, b) {
+          barrelUniforms.uBarrelStrength.value = b;
+          // 更新每张卡片在全局视口中的 X 坐标
+          var worldPos = new THREE.Vector3();
+          m.mesh.getWorldPosition(worldPos);
+          m.material.uniforms.uMeshX.value = worldPos.x - state.cardW / 2;
+        }
+
+        // ---- 驱动状态 ----
+        var rotCur = 0, rotTarget = 0;
+        var bendCur = 0, bendVel = 0, velRaw = 0;
+
+        if (lenis) {
+          lenis.on('scroll', function (e) { velRaw = e.velocity || 0; });
+        } else {
+          var lastY = window.scrollY;
+          window.addEventListener('scroll', function () {
+            velRaw = (window.scrollY - lastY);
+            lastY = window.scrollY;
+          }, { passive: true });
+        }
+
+        var st = null;
+        function attachScroll() {
+          // 必须在 CSS 转子的 ScrollTrigger 被 kill 之后再调用：
+          // 两个 pin 同时作用于同一 stage 会互相争 pin-spacer，造成频闪/跳动
+          st = createStageScrollTrigger(stage, function (progress) {
+            rotTarget = segmentEase(progress, n);
+          });
+        }
+
+        var D2R = Math.PI / 180;
+
+        gsap.ticker.add(function () {
+          // 弯曲目标：滚动速度驱动，停止即回 0
+          // velRaw > 0：向下滚动（内凹）；velRaw < 0：向上滚动（外凸）
+          var target = Math.max(-1, Math.min(1, velRaw * STAGE.BEND_K));
+          velRaw *= 0.8;
+          bendVel += (target - bendCur) * STAGE.BEND_STIFF;
+          bendVel *= STAGE.BEND_DAMP;
+          bendCur += bendVel;
+
+          rotCur += (rotTarget - rotCur) * 0.18;
+
+          meshes.forEach(function (m, i) {
+            var theta = (i * STAGE.STEP - rotCur) * D2R;
+            m.pivot.rotation.x = theta;
+            // 视野内的卡才施加弯曲，bendCur 直接传入（已归一化到 [-1, 1]）
+            applyBend(m, Math.abs(theta) < 1.65 ? bendCur : 0);
+          });
+
+          var idx = Math.min(n - 1, Math.max(0, Math.round(rotCur / STAGE.STEP)));
+          if (idx !== stageState.active) {
+            stageState.active = idx;
+            syncCaption();
+          }
+          var rect = stage.getBoundingClientRect();
+          if (rect.bottom > 0 && rect.top < window.innerHeight) {
+            renderer.render(scene, camera);
+          }
+        });
+
+        layout();
+        window.addEventListener('resize', layout);
+
+        // 点击：raycaster 命中卡片 → 打开对应详情
+        var raycaster = new THREE.Raycaster();
+        var pointer = new THREE.Vector2();
+        canvas.addEventListener('click', function (e) {
+          var r = canvas.getBoundingClientRect();
+          pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+          pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+          raycaster.setFromCamera(pointer, camera);
+          var hits = raycaster.intersectObjects(meshes.map(function (m) { return m.mesh; }));
+          if (hits.length) {
+            var hit = meshes.find(function (m) { return m.mesh === hits[0].object; });
+            if (hit) openModal(hit.id);
+          }
+        });
+
+        return { attachScroll: attachScroll, teardown: function () { if (st) st.kill(); } };
+      })
+      .catch(function (err) {
+        console.warn('[works-gl] fallback to CSS drum:', err);
+        return false;
+      });
+  }
+
+  /* ---------- CSS 刚性转子（WebGL 不可用时的降级） ---------- */
+  function renderWorksStage() {
+    var drum = document.getElementById('works-drum');
+    if (!drum) return;
+    drum.innerHTML = '';
+    PROJECTS.forEach(function (p) {
+      var panel = el('div', 'drum-panel');
+      panel.setAttribute('style', coverStyle(p));
+      panel.setAttribute('data-open', p.id);
+      panel.setAttribute('data-cursor-label', '查看');
+      panel.innerHTML = '<span class="drum-shade" aria-hidden="true"></span>';
+      drum.appendChild(panel);
+    });
+  }
+
+  function initWorksStage() {
+    var stage = document.getElementById('works-stage');
+    var drum = document.getElementById('works-drum');
+    if (!stage || !drum || !window.ScrollTrigger) return null;
+
+    stage.hidden = false;
+    renderWorksStage();
+    var panels = Array.prototype.slice.call(drum.children);
+    var shades = panels.map(function (panel) { return panel.firstChild; });
+    var n = panels.length;
+    if (!n) return null;
+    setStageCaptionTotal(n);
+
+    var STEP = STAGE.STEP;
+    var radius = 900;
+    var currentRot = 0;
+
+    function layout() {
+      var h = panels[0].getBoundingClientRect().height || stage.clientHeight * 0.55;
+      radius = (h / 2 + 84) / Math.sin((STEP / 2) * Math.PI / 180);
+      panels.forEach(function (panel) {
+        gsap.set(panel, {
+          xPercent: -50, yPercent: -50,
+          transformOrigin: '50% 50% ' + (-radius) + 'px',
+          force3D: true,
+        });
+      });
+    }
+
+    function render() {
+      panels.forEach(function (panel, i) {
+        var net = i * STEP - currentRot;
+        gsap.set(panel, { rotationX: -net });
+        var d = Math.abs(net);
+        var shade = Math.min(0.65, Math.max(0, (d - 18) / 55));
+        shades[i].style.opacity = shade.toFixed(3);
+      });
+      var idx = Math.min(n - 1, Math.max(0, Math.round(currentRot / STEP)));
+      if (idx !== stageState.active) {
+        stageState.active = idx;
+        syncCaption();
+      }
+    }
+
+    layout();
+    render();
+
+    var st = createStageScrollTrigger(stage, function (progress) {
+      currentRot = segmentEase(progress, n);
+      render();
+    });
+
+    window.addEventListener('resize', function () { layout(); render(); });
+    stageState.active = -1;
+    render();
+    return { st: st, teardown: function () { st.kill(); } };
   }
 
   /* ---------------- 项目详情弹层 ---------------- */
@@ -316,6 +720,8 @@
         return !!(node.closest && node.closest('.modal-body, .lightbox'));
       },
     });
+    // 暴露到全局，让 bend-scroll.js 可以读取真实速度
+    window.lenis = lenis;
     if (hasGsap && window.ScrollTrigger) {
       lenis.on('scroll', window.ScrollTrigger.update);
       window.gsap.ticker.add(function (time) { lenis.raf(time * 1000); });
@@ -437,8 +843,89 @@
     })();
   }
 
+  /* ---------------- Ricardo 风格垂直滚动舞台 ----------------
+   * 架构（对齐 ricardochance.com 真实实现）：
+   *   普通文档流卡片列 + bend-scroll.js 叠加视口曲率弯曲
+   *   不做任何 GSAP pin / yPercent 动画 —— 滚动就是原生滚动
+   * --------------------------------------------------------- */
+  function initRicardoStage() {
+    var stage = document.getElementById('works-stage-ricardo');
+    var track = document.getElementById('works-cards-track');
+    if (!stage || !track || typeof PROJECTS === 'undefined') return null;
+
+    stage.hidden = false;
+
+    PROJECTS.forEach(function (p, i) {
+      var card = el('div', 'ricardo-card');
+      card.setAttribute('data-index', i);
+      card.setAttribute('data-open', p.id);
+      if (p.coverImg) card.setAttribute('data-cover', p.coverImg); // 供 bend-gl.js 加载贴图
+
+      var bgImg = p.coverImg
+        ? "url('" + esc(p.coverImg) + "')"
+        : (p.cover || 'linear-gradient(135deg, #1d2440, #0e1220)');
+
+      var shortName = p.cardTitle || p.title.split('·')[0].trim();
+      var keyTags = (p.tags || []).slice(0, 3);
+
+      /* 结构说明：
+       *  .card-bg             → 背景图与圆角（内层 overflow:hidden，不影响弯曲溢出）
+       *  .card-caption-left   → 卡片左侧文案：项目名 + 关键标签
+       *  .card-caption-cta    → 卡片右侧「查看详情」按钮，data-open 走全局事件委托
+       * 文案层带 data-no-slice：bend-scroll.js 切分时会把它们从克隆体中剔除，
+       * 使文案不随卡片弯曲、也不会被复制成 64 份。 */
+      card.innerHTML =
+        '<div class="card-bg" style="background-image:' + bgImg + ';"></div>' +
+        '<div class="card-caption card-caption-left" data-no-slice>' +
+          '<p class="card-caption-name">' + esc(shortName) + '</p>' +
+          (keyTags.length
+            ? '<ul class="card-caption-tags">' + keyTags.map(function (t) {
+                return '<li>' + esc(t) + '</li>';
+              }).join('') + '</ul>'
+            : '') +
+        '</div>' +
+        '<button type="button" class="card-caption-cta" data-no-slice data-open="' + p.id + '"' +
+          ' data-cursor-label="查看详情">查看详情' + ARROW_SVG + '</button>';
+
+      track.appendChild(card);
+    });
+
+    /* double-rAF：确保浏览器完成布局后再调用 buildSlices
+     * （同步调用时 offsetHeight=0，切片高度全部算错） */
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { startBend(track); });
+    });
+
+    return { stage: stage };
+  }
+
+  /* 弯曲动效降级链：WebGL 版（四边起伏）→ DOM 切片版（仅左右边起伏）
+   * URL 加 ?bend=slice 可强制使用切片版，便于对比两版效果 */
+  function startBend(track) {
+    function useSlices() {
+      if (typeof applyBendScroll === 'function') applyBendScroll(track);
+    }
+    if (/[?&]bend=slice\b/.test(location.search) || typeof applyBendGL !== 'function') {
+      useSlices();
+      return;
+    }
+    applyBendGL(track).catch(function (err) {
+      console.warn('[bend-gl] fallback to slices:', err);
+      useSlices();
+    });
+  }
+
   /* ---------------- 启动 ---------------- */
-  renderWorks();
+  var stageEligible = animEnabled && finePointer &&
+    window.matchMedia('(min-width: 640px)').matches;
+
+  if (stageEligible) {
+    var ricardoStage = initRicardoStage();
+    if (!ricardoStage) renderWorks();
+  } else {
+    renderWorks();
+  }
+
   initAnims();
   initMagnetic();
   initCursor();

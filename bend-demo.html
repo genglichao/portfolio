@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bend Scroll — CSS 圆柱弯曲 Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: 'Inter', 'Helvetica Neue', sans-serif;
+      font-size: 15px;
+      /* 原生滚动，applyBendScroll 不 pin，纯视觉叠加 */
+    }
+
+    /* ---- 卡片容器：3 张实色占位卡 ---- */
+    #cards-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6vh;
+      padding: 15vh 0 20vh;
+    }
+
+    .demo-card {
+      width: 42vw;
+      height: 85vh;
+      border-radius: 20px;
+      position: relative;          /* buildSlices 依赖相对定位 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: rgba(255, 255, 255, 0.75);
+      user-select: none;
+    }
+
+    .demo-card:nth-child(1) {
+      background: linear-gradient(155deg, #1a2fdd 0%, #0b1466 100%);
+    }
+    .demo-card:nth-child(2) {
+      background: linear-gradient(155deg, #cc2424 0%, #7a0d0d 100%);
+    }
+    .demo-card:nth-child(3) {
+      background: linear-gradient(155deg, #1fa64a 0%, #0b5c22 100%);
+    }
+
+    /* ---- Debug 面板 ---- */
+    #dbg {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: rgba(0, 0, 0, 0.72);
+      color: #33ff88;
+      font-family: 'Courier New', 'SF Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.9;
+      padding: 10px 16px;
+      border-radius: 10px;
+      z-index: 9999;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(51, 255, 136, 0.18);
+      min-width: 220px;
+    }
+
+    /* ---- 使用提示 ---- */
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      color: rgba(255, 255, 255, 0.38);
+      pointer-events: none;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cards-wrap">
+    <div class="demo-card">Card 01</div>
+    <div class="demo-card">Card 02</div>
+    <div class="demo-card">Card 03</div>
+  </div>
+
+  <div id="dbg">
+    bend: —<br>
+    scaleX@top: —<br>
+    scaleX@bot: —<br>
+    slices: —
+  </div>
+
+  <div id="hint">scroll to bend ↕</div>
+
+  <script src="js/bend-scroll.js"></script>
+  <script>
+    /* 启动圆柱弯曲，覆盖两个参数以获得更明显的演示效果 */
+    var bendInstance = applyBendScroll(
+      document.getElementById('cards-wrap'),
+      { BEND_MAX: 0.22, GAIN: 0.038 }
+    );
+
+    /* ---- Debug 读出：采样第一张卡的顶/底切片 transform ---- */
+    var dbg = document.getElementById('dbg');
+
+    function extractScaleX(el) {
+      var m = (el.style.transform || '').match(/scaleX\(([^)]+)\)/);
+      return m ? parseFloat(m[1]).toFixed(5) : '?';
+    }
+
+    /* bend 在模块内部，通过顶部切片反推：
+       scaleX = 1 + bend * d²  →  bend ≈ (scaleX - 1) / d²
+       顶部切片 d 约为 -(1 + cardTopPx/halfVh)，受视口高度变化；
+       这里直接展示 scaleX 值，偏离 1.0 越多代表弯曲越强 */
+    (function dbgLoop() {
+      requestAnimationFrame(dbgLoop);
+
+      /* 取第一张卡的 bend-wrapper */
+      var wrap = document.querySelector('.bend-wrapper');
+      if (!wrap) {
+        dbg.innerHTML = 'initializing…';
+        return;
+      }
+      var slices = wrap.querySelectorAll('.bend-slice');
+      if (!slices.length) {
+        dbg.innerHTML = 'no slices';
+        return;
+      }
+
+      var topScale = extractScaleX(slices[0]);
+      var botScale = extractScaleX(slices[slices.length - 1]);
+
+      /* 从顶部切片推算 bend（近似，仅调试用） */
+      var topSX = parseFloat(topScale);
+      var card = wrap.parentNode;
+      var rect = card.getBoundingClientRect();
+      var halfVh = window.innerHeight * 0.5;
+      var sliceH = card.offsetHeight / slices.length;
+      var topCY = rect.top + 0.5 * sliceH;
+      var d = (topCY - halfVh) / halfVh;
+      d = Math.max(-1.3, Math.min(1.3, d));
+      var inferredBend = d !== 0 ? ((topSX - 1) / (d * d)).toFixed(4) : '—';
+
+      dbg.innerHTML =
+        'bend&nbsp;&nbsp;&nbsp;: ' + inferredBend + '<br>' +
+        'scaleX@top: ' + topScale + '<br>' +
+        'scaleX@bot: ' + botScale + '<br>' +
+        'slices&nbsp;&nbsp;: ' + slices.length;
+    })();
+  </script>
+</body>
+</html>

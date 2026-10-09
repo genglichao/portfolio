@@ -31,12 +31,13 @@ const PROJECTS = [
   {
     id: 'editloop',
     title: 'EditLoop · AI 剪辑协作系统',
+    cardTitle: 'EditLoop · AI 剪辑协作系统', // Works 卡片左侧展示名（不填则取 title 中 · 前的简称）
     typeLabel: '个人项目 · 开发中',
     year: '2026.06 – 至今',
     tags: ['Agentic Editing', 'GraphRAG', '审阅闭环'],
     desc: 'Local-First 的 AI 剪辑协作系统：在真实多轨剪辑底座上打通「审阅反馈 → AI Patch → 人工确认 → 版本复核」闭环——AI 的一切修改可预览、可撤回、可评测。',
     metric: '审阅 → AI Patch → 复核闭环已跑通；GraphRAG 素材检索与 5 个评测入口就绪',
-    coverImg: 'assets/editloop-cover.webp',
+    coverImg: 'assets/editloop-banner.webp',
     heroImg: 'assets/editloop-hero.webp',
     detail: {
       overview: '基于开源剪辑系统 FreeCut 二次开发的 Agentic Editing System，核心验证四件事：团队审阅的快速修改闭环、GraphRAG 素材理解与检索、DeepSeek Harness 单 Agent + Skill/Tools 架构、双评测体系。AI 只生成可预览、可撤回的 Timeline Patch，控制权始终在剪辑者手里。项目开发中，本地可运行。',
@@ -121,12 +122,13 @@ const PROJECTS = [
   {
     id: 'feishu-agent',
     title: '滴滴建联 · 内部需求智能撮合平台',
+    cardTitle: 'Agent建联平台', // Works 卡片左侧展示名（不填则取 title 中 · 前的简称）
     typeLabel: '实习项目 · 字节跳动飞书商业化',
     year: '2026.04 – 至今',
     tags: ['Agent 应用', 'B 端产品', '智能撮合'],
     desc: '面向市场、销售与客户成功团队的关键客户建联需求，参与建联应用与 Agent 方案设计：AI 匹配内部人脉、生成建联路径与破冰策略，把分散的关系信息变成可执行的建联机会。',
     metric: 'AI 双向自动撮合：为需求匹配人脉、为人脉匹配需求，提醒直达双方',
-    coverImg: 'assets/didi-cover.webp',
+    coverImg: 'assets/didi-banner.webp',
     heroImg: 'assets/didi-hero.webp',
     media: {
       kind: 'board',
@@ -228,7 +230,7 @@ const PROJECTS = [
     tags: ['对话式搜索', 'RAG', 'LLM 应用'],
     desc: '用自然语言对话替代表单搜索的机票发现工具：「周末想出去玩，预算 3000，带爸妈」一句话直达可解释的航班推荐——LLM 只做理解与表达，事实由检索与确定性打分保证。',
     metric: '完整链路独立跑通：意图理解 → 混合检索 → 可解释打分 → Grounded 生成',
-    coverImg: 'assets/flydeals-cover.webp',
+    coverImg: 'assets/flydeals-banner.webp',
     heroImg: 'assets/flydeals-hero.webp',
     media: {
       kind: 'link',
@@ -280,12 +282,13 @@ const PROJECTS = [
   {
     id: 'suitme',
     title: 'SuitMe · AI 衣橱管家与穿搭全场景解决',
+    cardTitle: 'SuitMe：AI衣橱与全场景穿搭', // Works 卡片左侧展示名（不填则取 title 中 · 前的简称）
     typeLabel: '校企合作项目',
     year: '2024.10 – 2025.05',
     tags: ['AIGC', 'LoRA 微调', '虚拟试衣'],
     desc: '通过 AI 降低时尚门槛：以用户衣橱数据为起点，结合场景、天气、情绪等多维度需求，提供 AI 穿搭推荐、AI 模特、AI 试穿功能，打造「千人千面」的智能穿搭体验。',
     metric: '完整交付 App 产品方案与高保真 Demo，Flux LoRA 试衣工作流交付联想 AI 产品团队',
-    coverImg: 'assets/suitme-cover.webp',
+    coverImg: 'assets/suitme-banner.webp',
     heroImg: 'assets/suitme-hero.webp',
     media: {
       kind: 'board',
